@@ -197,6 +197,25 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 		lastAssistantText = "";
 	});
 
+	function getSessionIdentifier(ctx: ExtensionContext): string {
+		try {
+			const sessionName = pi.getSessionName?.() || ctx.sessionManager?.getSessionName?.();
+			if (sessionName && sessionName.trim()) {
+				return sessionName.trim();
+			}
+			const cwd = ctx.cwd || ctx.sessionManager?.getCwd?.();
+			if (cwd) {
+				const base = path.basename(cwd);
+				if (base && base !== "/" && base !== ".") {
+					return base;
+				}
+			}
+		} catch {
+			// Fallback
+		}
+		return "omp";
+	}
+
 	// Immediate Alert on User Question (Ask Tool)
 	pi.on("tool_execution_start", async (event, ctx) => {
 		if (!enabled) return;
@@ -208,9 +227,10 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			const args = event.args as Record<string, unknown> | undefined;
 			const question = (args?.question || args?.prompt || args?.message || "User input requested") as string;
 			const cleaned = cleanForNotification(question, 280);
+			const sessionName = getSessionIdentifier(ctx);
 
 			const res = await sendNtfy(`Question waiting for your answer:\n${cleaned}`, {
-				title: "Question Waiting",
+				title: `[${sessionName}] Question Waiting`,
 				priority: "urgent",
 			});
 
@@ -226,9 +246,10 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 	pi.on("tool_approval_requested" as never, async (event: unknown, ctx: ExtensionContext) => {
 		if (!enabled) return;
 		const toolName = isRecord(event) && typeof event.toolName === "string" ? event.toolName : "tool";
+		const sessionName = getSessionIdentifier(ctx);
 
 		const res = await sendNtfy(`Waiting for your approval to run tool: ${toolName}`, {
-			title: "Tool Approval Required",
+			title: `[${sessionName}] Tool Approval Required`,
 			priority: "high",
 		});
 
@@ -286,8 +307,9 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 					summary = "Agent finished turn and is ready.";
 				}
 
+				const sessionName = getSessionIdentifier(ctx);
 				const res = await sendNtfy(`Task completed:\n${summary}`, {
-					title: "Task Completed",
+					title: `[${sessionName}] Task Completed`,
 					priority: "high",
 				});
 
@@ -379,8 +401,9 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			}
 			case "test": {
 				ctx.ui.notify(`Sending test push notification to '${config.topic}' via ${config.server}...`, "info");
+				const sessionName = getSessionIdentifier(ctx);
 				const res = await sendNtfy("This is a test notification from oh-my-pi. Everything is working.", {
-					title: "Test Notification",
+					title: `[${sessionName}] Test Notification`,
 					priority: "high",
 				});
 				if (res.success) {
