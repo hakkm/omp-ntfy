@@ -1,5 +1,10 @@
 # omp-ntfy
 
+[![npm version](https://img.shields.io/npm/v/omp-ntfy.svg)](https://www.npmjs.com/package/omp-ntfy)
+[![npm downloads](https://img.shields.io/npm/dm/omp-ntfy.svg)](https://www.npmjs.com/package/omp-ntfy)
+[![GitHub license](https://img.shields.io/github/license/hakkm/omp-ntfy.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/hakkm/omp-ntfy.svg)](https://github.com/hakkm/omp-ntfy)
+
 Instant, 100% free push notifications to your phone for the [oh-my-pi](https://github.com/can1357/oh-my-pi) (`omp`) coding agent and [pi](https://pi.dev) via [ntfy.sh](https://ntfy.sh).
 
 Know the exact second your agent completes a long-running task or stops to wait for your answer — without watching the terminal, without paid API subscriptions, and without scanning QR codes that expire.
