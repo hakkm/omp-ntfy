@@ -233,47 +233,92 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 		}
 	});
 
-	// Capture assistant message
-	pi.on("agent_end", (event) => {
+	// Helper to extract assistant text from session_stop payload
+	function snapshotFromStopEvent(event: unknown): string | undefined {
+		if (!isRecord(event)) return undefined;
+		const explicit = event.last_assistant_message;
+		if (isRecord(explicit) && explicit.role === "assistant") {
+			return extractAssistantText(explicit);
+		}
+		if (Array.isArray(event.messages) && event.messages.length > 0) {
+			const last = event.messages[event.messages.length - 1];
+			return extractAssistantText(last);
+		}
+		return undefined;
+	}
+
+	function deferQuiet(ctx: ExtensionContext, fire: () => void, ms = 250): void {
+		if ("setTimeout" in ctx && typeof (ctx as Record<string, unknown>).setTimeout === "function") {
+			((ctx as Record<string, unknown>).setTimeout as (callback: () => void, ms?: number) => unknown)(fire, ms);
+		} else {
+			setTimeout(fire, ms);
+		}
+	}
+
+	let lastSentGeneration = 0;
+
+	// Settle / Task Finished
+	const scheduleSettleNotification = (ctx: ExtensionContext, textFromEvent?: string) => {
+		if (!enabled) return;
+		if (ctx.hasPendingMessages()) return;
+
+		if (textFromEvent) {
+			lastAssistantText = textFromEvent;
+		}
+
+		const generation = ++settleCounter;
+
+		// Quiet window: allow prompt loop to settle and return to input
+		deferQuiet(ctx, () => {
+			void (async () => {
+				if (generation !== settleCounter) return;
+				if (lastSentGeneration === generation) return;
+				if (ctx.hasPendingMessages()) return;
+
+				lastSentGeneration = generation;
+
+				let summary = cleanForNotification(lastAssistantText, config.maxTextLength);
+				if (!summary) {
+					summary = "Agent finished turn and is ready.";
+				}
+
+				const res = await sendNtfy(`Task completed:\n${summary}`, {
+					title: "Task Completed",
+					priority: "high",
+					tags: "bell,white_check_mark",
+				});
+
+				if (res.success) {
+					handleDisarmIfOnce(ctx);
+				} else {
+					ctx.ui.notify(`[omp-ntfy] Failed to send completion alert: ${res.detail}`, "warning");
+				}
+			})().catch(() => undefined);
+		}, 250);
+	};
+
+	// Fork-safe event registration
+	type ForkEventHandler = (event: unknown, ctx: ExtensionContext) => void;
+	const onForkEvent = (event: string, handler: ForkEventHandler): void => {
+		pi.on(event as never, handler as never);
+	};
+
+	// Capture assistant message from agent_end
+	pi.on("agent_end", (event, ctx) => {
 		if (Array.isArray(event.messages) && event.messages.length > 0) {
 			const last = event.messages[event.messages.length - 1];
 			lastAssistantText = extractAssistantText(last);
 		}
+		if (!event.willContinue) {
+			scheduleSettleNotification(ctx, lastAssistantText);
+		}
 	});
 
-	// Settle / Task Finished
-	const onSettled = (ctx: ExtensionContext) => {
-		if (!enabled) return;
-		if (!ctx.isIdle() || ctx.hasPendingMessages()) return;
-
-		const currentGeneration = ++settleCounter;
-
-		// Quiet window: confirm agent is genuinely idle
-		setTimeout(async () => {
-			if (currentGeneration !== settleCounter) return;
-			if (!ctx.isIdle() || ctx.hasPendingMessages()) return;
-
-			let summary = cleanForNotification(lastAssistantText, config.maxTextLength);
-			if (!summary) {
-				summary = "Agent settled and task is completed.";
-			}
-
-			const res = await sendNtfy(`Task completed:\n${summary}`, {
-				title: "Task Completed",
-				priority: "high",
-				tags: "bell,white_check_mark",
-			});
-
-			if (res.success) {
-				handleDisarmIfOnce(ctx);
-			} else {
-				ctx.ui.notify(`[omp-ntfy] Failed to send completion alert: ${res.detail}`, "warning");
-			}
-		}, 300);
-	};
-
-	pi.on("agent_settled", (_event, ctx) => onSettled(ctx));
-	pi.on("session_stop" as never, (_event: unknown, ctx: ExtensionContext) => onSettled(ctx));
+	pi.on("agent_settled", (_event, ctx) => scheduleSettleNotification(ctx, lastAssistantText));
+	onForkEvent("session_stop", (event, ctx) => {
+		const text = snapshotFromStopEvent(event) ?? lastAssistantText;
+		scheduleSettleNotification(ctx, text);
+	});
 
 	// --------------------------------------------------------------------------
 	// Command Handler
