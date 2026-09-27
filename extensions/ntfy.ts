@@ -149,7 +149,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			const headers: Record<string, string> = {
 				Title: encodeHeaderValue(rawTitle),
 				Priority: options.priority || "high",
-				Tags: options.tags || "robot,bell",
+				Tags: options.tags || "bell",
 			};
 
 			const resp = await fetch(url, {
@@ -206,7 +206,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			const res = await sendNtfy(`Question waiting for your answer:\n${cleaned}`, {
 				title: "Question Waiting",
 				priority: "urgent",
-				tags: "question,bell",
+				tags: "bell,question",
 			});
 
 			if (res.success) {
@@ -225,7 +225,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 		const res = await sendNtfy(`Waiting for your approval to run tool: ${toolName}`, {
 			title: "Tool Approval Required",
 			priority: "high",
-			tags: "warning,bell",
+			tags: "bell,warning",
 		});
 
 		if (res.success) {
@@ -261,7 +261,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			const res = await sendNtfy(`Task completed:\n${summary}`, {
 				title: "Task Completed",
 				priority: "high",
-				tags: "white_check_mark,tada",
+				tags: "bell,white_check_mark",
 			});
 
 			if (res.success) {
@@ -334,7 +334,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 				const res = await sendNtfy("This is a test notification from oh-my-pi! Everything is working.", {
 					title: "Test Notification",
 					priority: "high",
-					tags: "tada,bell",
+					tags: "bell",
 				});
 				if (res.success) {
 					ctx.ui.notify(`✅ Test push notification delivered to topic '${config.topic}'! Check your phone.`, "info");
