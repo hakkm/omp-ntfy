@@ -1,8 +1,9 @@
 /**
- * omp-ntfy — Instant phone push notifications for oh-my-pi (omp) and pi via ntfy.sh.
+ * omp-ntfy — Clean push notifications for oh-my-pi (omp) and pi via ntfy.sh.
  *
  * Highlights:
  * - 100% Free & Open Source: No accounts, no subscriptions, zero QR codes.
+ * - Clean Text: No emojis, no notification icons in title or body.
  * - Disabled by default: Starts silent on every new session.
  * - One-shot arming:
  *     /ntfy once       (notifies on next completion or question, then auto-disarms)
@@ -99,7 +100,10 @@ function cleanForNotification(text: string, maxLength: number): string {
 		.replace(/\*\*([^*]+)\*\*/g, "$1")
 		.replace(/\*([^*]+)\*/g, "$1")
 		.replace(/#+\s+/g, "")
+		// Strip all emojis and pictographs from the body
+		.replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3\u2600-\u27BF]/gu, "")
 		.replace(/\n{3,}/g, "\n\n")
+		.replace(/\s+/g, " ")
 		.trim();
 
 	if (cleaned.length > maxLength) {
@@ -110,8 +114,6 @@ function cleanForNotification(text: string, maxLength: number): string {
 
 function encodeHeaderValue(value: string): string {
 	// Standard HTTP header values must be byte strings.
-	// If non-ASCII characters (e.g. emojis) are present, encode using RFC 2047 Base64
-	// which ntfy natively decodes on delivery.
 	if (/[^\x00-\x7F]/.test(value)) {
 		return `=?utf-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
 	}
@@ -128,7 +130,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 	let settleCounter = 0;
 	let lastAssistantText = "";
 
-	/** Send push notification via ntfy */
+	/** Send push notification via ntfy without any icon tags */
 	async function sendNtfy(
 		message: string,
 		options: {
@@ -149,8 +151,12 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			const headers: Record<string, string> = {
 				Title: encodeHeaderValue(rawTitle),
 				Priority: options.priority || "high",
-				Tags: options.tags || "bell",
 			};
+
+			// Only set Tags header if explicitly supplied (keeps notifications completely icon-free by default)
+			if (options.tags) {
+				headers.Tags = options.tags;
+			}
 
 			const resp = await fetch(url, {
 				method: "POST",
@@ -172,7 +178,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 		if (mode === "once") {
 			enabled = false;
 			ctx.ui.notify(
-				`📱 [omp-ntfy] Notification delivered to '${config.topic}'. Session alerts disarmed.`,
+				`[omp-ntfy] Notification delivered to '${config.topic}'. Session alerts disarmed.`,
 				"info"
 			);
 		}
@@ -206,7 +212,6 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			const res = await sendNtfy(`Question waiting for your answer:\n${cleaned}`, {
 				title: "Question Waiting",
 				priority: "urgent",
-				tags: "bell,question",
 			});
 
 			if (res.success) {
@@ -225,7 +230,6 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 		const res = await sendNtfy(`Waiting for your approval to run tool: ${toolName}`, {
 			title: "Tool Approval Required",
 			priority: "high",
-			tags: "bell,warning",
 		});
 
 		if (res.success) {
@@ -285,7 +289,6 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 				const res = await sendNtfy(`Task completed:\n${summary}`, {
 					title: "Task Completed",
 					priority: "high",
-					tags: "bell,white_check_mark",
 				});
 
 				if (res.success) {
@@ -333,7 +336,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 				enabled = true;
 				mode = "once";
 				ctx.ui.notify(
-					`🔔 ntfy ARMED (one-shot: will notify topic '${config.topic}' on next completion or question, then disarm).`,
+					`[omp-ntfy] ARMED (one-shot: will notify topic '${config.topic}' on next completion or question, then disarm).`,
 					"info"
 				);
 				break;
@@ -342,14 +345,14 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 				enabled = true;
 				mode = "continuous";
 				ctx.ui.notify(
-					`🔔 ntfy ENABLED (continuous notifications to topic '${config.topic}').`,
+					`[omp-ntfy] ENABLED (continuous notifications to topic '${config.topic}').`,
 					"info"
 				);
 				break;
 			}
 			case "off": {
 				enabled = false;
-				ctx.ui.notify(`🔕 ntfy notifications DISABLED.`, "info");
+				ctx.ui.notify(`[omp-ntfy] notifications DISABLED.`, "info");
 				break;
 			}
 			case "topic": {
@@ -357,7 +360,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 				if (topic) {
 					config.topic = topic;
 					saveConfig(config);
-					ctx.ui.notify(`ntfy topic updated to '${config.topic}'.`, "info");
+					ctx.ui.notify(`[omp-ntfy] topic updated to '${config.topic}'.`, "info");
 				} else {
 					ctx.ui.notify("Usage: /ntfy topic <topic_name>", "warning");
 				}
@@ -368,7 +371,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 				if (server) {
 					config.server = server;
 					saveConfig(config);
-					ctx.ui.notify(`ntfy server updated to '${config.server}'.`, "info");
+					ctx.ui.notify(`[omp-ntfy] server updated to '${config.server}'.`, "info");
 				} else {
 					ctx.ui.notify("Usage: /ntfy server <https://ntfy.sh or self-hosted>", "warning");
 				}
@@ -376,15 +379,14 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			}
 			case "test": {
 				ctx.ui.notify(`Sending test push notification to '${config.topic}' via ${config.server}...`, "info");
-				const res = await sendNtfy("This is a test notification from oh-my-pi! Everything is working.", {
+				const res = await sendNtfy("This is a test notification from oh-my-pi. Everything is working.", {
 					title: "Test Notification",
 					priority: "high",
-					tags: "bell",
 				});
 				if (res.success) {
-					ctx.ui.notify(`✅ Test push notification delivered to topic '${config.topic}'! Check your phone.`, "info");
+					ctx.ui.notify(`[omp-ntfy] Test push notification delivered to topic '${config.topic}'. Check your phone.`, "info");
 				} else {
-					ctx.ui.notify(`❌ Test failed: ${res.detail}`, "error");
+					ctx.ui.notify(`[omp-ntfy] Test failed: ${res.detail}`, "error");
 				}
 				break;
 			}
