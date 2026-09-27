@@ -108,6 +108,16 @@ function cleanForNotification(text: string, maxLength: number): string {
 	return cleaned;
 }
 
+function encodeHeaderValue(value: string): string {
+	// Standard HTTP header values must be byte strings.
+	// If non-ASCII characters (e.g. emojis) are present, encode using RFC 2047 Base64
+	// which ntfy natively decodes on delivery.
+	if (/[^\x00-\x7F]/.test(value)) {
+		return `=?utf-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+	}
+	return value;
+}
+
 export default function ntfyPlugin(pi: ExtensionAPI): void {
 	// By default, DISABLED for every new session
 	let enabled = false;
@@ -135,8 +145,9 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 		const url = `${server}/${encodeURIComponent(config.topic)}`;
 
 		try {
+			const rawTitle = options.title || "oh-my-pi";
 			const headers: Record<string, string> = {
-				Title: options.title || "oh-my-pi",
+				Title: encodeHeaderValue(rawTitle),
 				Priority: options.priority || "high",
 				Tags: options.tags || "robot,bell",
 			};
@@ -193,7 +204,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			const cleaned = cleanForNotification(question, 280);
 
 			const res = await sendNtfy(`Question waiting for your answer:\n${cleaned}`, {
-				title: "❓ Question Waiting",
+				title: "Question Waiting",
 				priority: "urgent",
 				tags: "question,bell",
 			});
@@ -212,7 +223,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 		const toolName = isRecord(event) && typeof event.toolName === "string" ? event.toolName : "tool";
 
 		const res = await sendNtfy(`Waiting for your approval to run tool: ${toolName}`, {
-			title: "⚠️ Tool Approval Required",
+			title: "Tool Approval Required",
 			priority: "high",
 			tags: "warning,bell",
 		});
@@ -248,7 +259,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			}
 
 			const res = await sendNtfy(`Task completed:\n${summary}`, {
-				title: "✅ Task Completed",
+				title: "Task Completed",
 				priority: "high",
 				tags: "white_check_mark,tada",
 			});
@@ -321,7 +332,7 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 			case "test": {
 				ctx.ui.notify(`Sending test push notification to '${config.topic}' via ${config.server}...`, "info");
 				const res = await sendNtfy("This is a test notification from oh-my-pi! Everything is working.", {
-					title: "🧪 Test Notification",
+					title: "Test Notification",
 					priority: "high",
 					tags: "tada,bell",
 				});
