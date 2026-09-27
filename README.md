@@ -31,9 +31,9 @@ Know the exact second your agent completes a long-running task or stops to wait 
 
 ### On oh-my-pi (omp)
 ```bash
-omp install git:github.com/hakkm/omp-ntfy
-# or via npm once published:
 omp install npm:omp-ntfy
+# or directly from git:
+omp install git:github.com/hakkm/omp-ntfy
 ```
 
 For local development:
@@ -43,7 +43,7 @@ omp plugin link ./omp-ntfy
 
 ### On stock pi
 ```bash
-pi install git:github.com/hakkm/omp-ntfy
+pi install npm:omp-ntfy
 ```
 
 ---
