@@ -16,6 +16,14 @@
   ],
   "license": "MIT",
   "author": "Khabir",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hakkm/omp-ntfy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hakkm/omp-ntfy/issues"
+  },
+  "homepage": "https://github.com/hakkm/omp-ntfy#readme",
   "pi": {
     "extensions": ["./extensions"]
   },
