@@ -1,0 +1,33 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "omp-ntfy",
+  "owner": {
+    "name": "hakkm"
+  },
+  "metadata": {
+    "description": "omp marketplace for omp-ntfy"
+  },
+  "plugins": [
+    {
+      "name": "omp-ntfy",
+      "description": "Zero-friction, free phone push notifications for oh-my-pi and pi via ntfy.sh",
+      "version": "0.1.0",
+      "author": {
+        "name": "hakkm"
+      },
+      "homepage": "https://github.com/hakkm/omp-ntfy",
+      "repository": "https://github.com/hakkm/omp-ntfy",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "oh-my-pi",
+        "omp",
+        "ntfy",
+        "notifications",
+        "push-notifications",
+        "extension"
+      ],
+      "source": "./"
+    }
+  ]
+}

@@ -27,6 +27,9 @@
   "pi": {
     "extensions": ["./extensions"]
   },
+  "omp": {
+    "extensions": ["./extensions"]
+  },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
   },
