@@ -68,9 +68,9 @@ Inside your `omp` terminal session, use the `/ntfy` slash command:
 
 | Event | Phone Notification | Priority |
 | :--- | :--- | :--- |
-| **Task Completed** | `✅ Task Completed: <concise summary of work done>` | High (Chime + Vibration) |
-| **Question Waiting** | `❓ Question Waiting: <what the agent needs your input on>` | Urgent (Loud + Persistent) |
-| **Tool Approval** | `⚠️ Tool Approval Required: <tool name>` | High |
+| **Task Completed** | `Task completed: <concise summary of work done>` | High (Chime + Vibration) |
+| **Question Waiting** | `Question waiting for your answer: <what the agent needs your input on>` | Urgent (Loud + Persistent) |
+| **Tool Approval** | `Waiting for your approval to run tool: <tool name>` | High |
 
 - **Quiet Window Debounce:** Completion notifications only fire when the agent has truly settled and returned to idle, preventing duplicate alerts during multi-turn plan executions.
 - **Smart Formatting:** Code fences and markdown symbols are stripped to keep push notification previews clean and readable on lock screens.
