@@ -14,6 +14,7 @@
  *     /ntfy status     (displays current arming state and topic)
  */
 
+import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -29,6 +30,10 @@ export interface NtfyConfig {
 
 const CONFIG_FILE = "omp-ntfy.json";
 
+// ntfy.sh topics are public and first-come: anyone using the same name shares the channel.
+// v0.1.0 defaulted every user to this topic, so treat it as unset and move off it.
+const LEGACY_SHARED_TOPIC = "omp-alert";
+
 function getConfigPath(): string {
 	const ompDir = path.join(os.homedir(), ".omp", "agent");
 	if (fs.existsSync(ompDir)) {
@@ -37,25 +42,46 @@ function getConfigPath(): string {
 	return path.join(os.homedir(), ".pi", "agent", CONFIG_FILE);
 }
 
-function loadConfig(): NtfyConfig {
+const TOPIC_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
+
+/** Short so it's easy to type into the phone app; `/ntfy topic` sets a longer one for more privacy. */
+function generateTopic(): string {
+	let suffix = "";
+	for (let i = 0; i < 4; i++) {
+		suffix += TOPIC_ALPHABET[crypto.randomInt(TOPIC_ALPHABET.length)];
+	}
+	return `omp-${suffix}`;
+}
+
+/** Loads config, generating and saving a random topic when none is set. `notice` is set when that happened. */
+function loadConfig(): { config: NtfyConfig; notice?: string } {
 	const configPath = getConfigPath();
+	let saved: Partial<NtfyConfig> = {};
 	try {
 		if (fs.existsSync(configPath)) {
-			const raw = fs.readFileSync(configPath, "utf8");
-			return {
-				topic: process.env.NTFY_TOPIC || "omp-alert",
-				server: process.env.NTFY_SERVER || "https://ntfy.sh",
-				maxTextLength: 350,
-				...JSON.parse(raw),
-			};
+			saved = JSON.parse(fs.readFileSync(configPath, "utf8"));
 		}
 	} catch {
 		// Fallback
 	}
-	return {
-		topic: process.env.NTFY_TOPIC || "omp-alert",
+	const config: NtfyConfig = {
+		topic: process.env.NTFY_TOPIC || "",
 		server: process.env.NTFY_SERVER || "https://ntfy.sh",
 		maxTextLength: 350,
+		...saved,
+	};
+	if (config.topic && config.topic !== LEGACY_SHARED_TOPIC) {
+		return { config };
+	}
+
+	config.topic = generateTopic();
+	saveConfig(config);
+	return {
+		config,
+		// Upgraders without a config file can't be told apart from new installs, so always mention the old topic.
+		notice:
+			`[omp-ntfy] Your ntfy topic is '${config.topic}'. Subscribe to it in the ntfy app to receive alerts. ` +
+			`If you subscribed to '${LEGACY_SHARED_TOPIC}' with omp-ntfy 0.1.0, unsubscribe: that topic is shared with every omp-ntfy user.`,
 	};
 }
 
@@ -124,7 +150,9 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 	// By default, DISABLED for every new session
 	let enabled = false;
 	let mode: NtfyMode = "once";
-	const config: NtfyConfig = loadConfig();
+	const { config, notice } = loadConfig();
+	// Shown with the first /ntfy command so the user learns which topic to subscribe to.
+	let topicNotice = notice;
 
 	let lastQuestionAlertAt = 0;
 	let settleCounter = 0;
@@ -352,6 +380,13 @@ export default function ntfyPlugin(pi: ExtensionAPI): void {
 	const handleCommand = async (argsStr: string, ctx: ExtensionContext) => {
 		const args = argsStr.trim().split(/\s+/);
 		const action = (args[0] || "").toLowerCase();
+
+		if (topicNotice) {
+			if (action !== "topic") {
+				ctx.ui.notify(topicNotice, "warning");
+			}
+			topicNotice = undefined;
+		}
 
 		switch (action) {
 			case "once": {

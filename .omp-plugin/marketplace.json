@@ -11,7 +11,7 @@
     {
       "name": "omp-ntfy",
       "description": "Zero-friction, free phone push notifications for oh-my-pi and pi via ntfy.sh",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "hakkm"
       },
