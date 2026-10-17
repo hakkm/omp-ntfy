@@ -1,9 +1,9 @@
 # omp-ntfy
 
-[![npm version](https://img.shields.io/npm/v/omp-ntfy.svg)](https://www.npmjs.com/package/omp-ntfy)
-[![npm downloads](https://img.shields.io/npm/dm/omp-ntfy.svg)](https://www.npmjs.com/package/omp-ntfy)
-[![GitHub license](https://img.shields.io/github/license/hakkm/omp-ntfy.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/hakkm/omp-ntfy.svg)](https://github.com/hakkm/omp-ntfy)
+[![npm version](https://badgen.net/npm/v/omp-ntfy)](https://www.npmjs.com/package/omp-ntfy)
+[![npm downloads](https://badgen.net/npm/dm/omp-ntfy)](https://www.npmjs.com/package/omp-ntfy)
+[![GitHub license](https://badgen.net/github/license/hakkm/omp-ntfy)](LICENSE)
+[![GitHub stars](https://badgen.net/github/stars/hakkm/omp-ntfy)](https://github.com/hakkm/omp-ntfy)
 
 Instant, 100% free push notifications to your phone for the [oh-my-pi](https://github.com/can1357/oh-my-pi) (`omp`) coding agent and [pi](https://pi.dev) via [ntfy.sh](https://ntfy.sh).
 
