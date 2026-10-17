@@ -1,6 +1,6 @@
 {
   "name": "omp-ntfy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Zero-friction, 100% free phone push notifications for oh-my-pi and pi via ntfy.sh: one-shot arming (/ntfy once), task completion summaries, and input waiting alerts.",
   "keywords": [
     "pi-package",
